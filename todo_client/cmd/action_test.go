@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 )
@@ -114,5 +115,83 @@ func TestViewAction(t *testing.T) {
 				t.Fatalf("Unexpected error: %s", err)
 			}
 		})
+	}
+}
+
+func TestAddAction(t *testing.T) {
+	testCases := []struct {
+		name           string
+		expUrlPath     string
+		expMethod      string
+		expBody        string
+		expContentType string
+		expErr         error
+		expOut         string
+		args           []string
+		resp           struct {
+			Status int
+			Body   string
+		}
+	}{
+		{name: "Add request",
+			expUrlPath:     "/todo",
+			expMethod:      "POST",
+			expBody:        `{"Task":"Task 1"}` + "\n",
+			expContentType: "application/json",
+			expErr:         nil,
+			expOut:         "Task: Task_1 added to the list",
+			args:           []string{"Task", "1"},
+			resp:           testServerResponse["created"],
+		},
+		{name: "Add bad request",
+			expUrlPath:     "/todo",
+			expMethod:      "POST",
+			expBody:        `{"Task":""}` + "\n",
+			expContentType: "application/json",
+			expErr:         ErrInvalidResponse,
+			expOut:         "Task: Task_1 added to the list",
+			args:           []string{""},
+			resp:           testServerResponse["badRequest"],
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			url, cleanUp := mockServer(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tc.expUrlPath {
+					t.Errorf("Expected path: %s, got %s", tc.expUrlPath, r.URL.Path)
+				}
+				if r.Method != tc.expMethod {
+					t.Errorf("Expected method: %s, got %s", tc.expMethod, r.Method)
+				}
+				body, err := io.ReadAll(r.Body)
+
+				if err != nil {
+					t.Fatalf("Can't read the Body: %s", err)
+				}
+				if string(body) != tc.expBody {
+					t.Errorf("Expected body: %s, got %s", tc.expBody, string(body))
+				}
+				contentType := r.Header.Get("Content-Type")
+				if contentType != tc.expContentType {
+					t.Errorf("Expected content-type: %s, got %s", tc.expContentType, contentType)
+				}
+				w.WriteHeader(tc.resp.Status)
+				fmt.Fprintln(w, tc.resp.Body)
+			})
+
+			defer cleanUp()
+			var out bytes.Buffer
+			err := addAction(&out, url, tc.args)
+			if tc.expErr != nil {
+				if !errors.Is(err, tc.expErr) {
+					t.Errorf("Expected error: %s, got %s", tc.expErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpeted error: %s", err)
+			}
+		},
+		)
 	}
 }
