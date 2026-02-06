@@ -125,3 +125,13 @@ func addItem(apiUrl, task string) error {
 	return sendRequest(u, http.MethodPost, "application/json",
 		http.StatusCreated, &buffer)
 }
+
+func completeItem(apiUrl string, id int) error {
+	u := fmt.Sprintf("%s/todo/%d?complete", apiUrl, id)
+	return sendRequest(u, http.MethodPatch, "", http.StatusNoContent, nil)
+}
+
+func deleteItem(apiUrl string, id int) error {
+	u := fmt.Sprintf("%s/todo/%d", apiUrl, id)
+	return sendRequest(u, http.MethodDelete, "", http.StatusNoContent, nil)
+}

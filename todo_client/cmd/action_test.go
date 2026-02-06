@@ -195,3 +195,125 @@ func TestAddAction(t *testing.T) {
 		)
 	}
 }
+
+func TestCompleteAction(t *testing.T) {
+	testCases := []struct {
+		name       string
+		expUrlPath string
+		expMethod  string
+		expErr     error
+		expOut     string
+		args       []string
+		resp       struct {
+			Status int
+			Body   string
+		}
+	}{
+		{name: "Complete",
+			expUrlPath: "/todo/1",
+			expMethod:  "PATCH",
+			expErr:     nil,
+			expOut:     "Item No 1 set as completed",
+			args:       []string{"1"},
+			resp:       testServerResponse["noContent"],
+		},
+		{name: "Complete without arg",
+			expUrlPath: "/todo/",
+			expMethod:  "PATCH",
+			expErr:     ErrNotNumber,
+			expOut:     "",
+			args:       []string{""},
+			resp:       testServerResponse["badRequest"],
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			url, cleanUp := mockServer(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tc.expUrlPath {
+					t.Errorf("Expected path: %s, got %s", tc.expUrlPath, r.URL.Path)
+				}
+				if r.Method != tc.expMethod {
+					t.Errorf("Expected method: %s, got %s", tc.expMethod, r.Method)
+				}
+				w.WriteHeader(tc.resp.Status)
+				fmt.Fprintln(w, tc.resp.Body)
+
+			},
+			)
+			defer cleanUp()
+			var out bytes.Buffer
+			err := completeAction(&out, url, tc.args)
+			if tc.expErr != nil {
+				if !errors.Is(tc.expErr, errors.Unwrap(err)) {
+					t.Errorf("Expected error %s, got %s", tc.expErr, errors.Unwrap(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error %s", err)
+			}
+		},
+		)
+	}
+}
+
+func TestRemoveAction(t *testing.T) {
+	testCases := []struct {
+		name       string
+		expUrlPath string
+		expMethod  string
+		expErr     error
+		expOut     string
+		args       []string
+		resp       struct {
+			Status int
+			Body   string
+		}
+	}{
+		{name: "Delete",
+			expUrlPath: "/todo/1",
+			expMethod:  "DELETE",
+			expErr:     nil,
+			expOut:     "Item No 1 deleted",
+			args:       []string{"1"},
+			resp:       testServerResponse["noContent"],
+		},
+		{name: "Delete without arg",
+			expUrlPath: "/todo/",
+			expMethod:  "DELETE",
+			expErr:     ErrNotNumber,
+			expOut:     "",
+			args:       []string{""},
+			resp:       testServerResponse["badRequest"],
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			url, cleanUp := mockServer(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tc.expUrlPath {
+					t.Errorf("Expected path: %s, got %s", tc.expUrlPath, r.URL.Path)
+				}
+				if r.Method != tc.expMethod {
+					t.Errorf("Expected method: %s, got %s", tc.expMethod, r.Method)
+				}
+				w.WriteHeader(tc.resp.Status)
+				fmt.Fprintln(w, tc.resp.Body)
+
+			},
+			)
+			defer cleanUp()
+			var out bytes.Buffer
+			err := removeAction(&out, url, tc.args)
+			if tc.expErr != nil {
+				if !errors.Is(tc.expErr, errors.Unwrap(err)) {
+					t.Errorf("Expected error %s, got %s", tc.expErr, errors.Unwrap(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error %s", err)
+			}
+		},
+		)
+	}
+}
