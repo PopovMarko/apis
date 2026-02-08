@@ -217,7 +217,7 @@ func TestCompleteAction(t *testing.T) {
 			expErr:     nil,
 			expOut:     "Item No 1 set as completed",
 			args:       []string{"1"},
-			resp:       testServerResponse["noContent"],
+			resp:       testServerResponse["noResults"],
 		},
 		{name: "Complete without arg",
 			expUrlPath: "/todo/",
